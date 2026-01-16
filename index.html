@@ -71,9 +71,10 @@
         
         #loading {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: #0f172a; z-index: 50; display: flex; 
+            background: #0f172a; z-index: 50; display: flex; flex-direction: column;
             justify-content: center; align-items: center; color: #06b6d4;
             font-family: 'Orbitron', sans-serif; letter-spacing: 2px;
+            transition: opacity 0.8s ease-out;
         }
 
         /* Blinking Cursor for Timestamp */
@@ -94,7 +95,14 @@
 <body class="text-slate-200">
 
     <!-- Loading Screen -->
-    <div id="loading">INITIALIZING PROTOCOL TEJAS...</div>
+    <div id="loading">
+        <div class="text-lg md:text-2xl tracking-[0.2em] animate-pulse mb-6 text-white text-center px-4">INITIALIZING PROTOCOL TEJAS...</div>
+        <!-- Progress Bar -->
+        <div class="w-48 md:w-64 h-1 bg-slate-800 rounded-full overflow-hidden relative">
+            <div id="loading-bar" class="absolute top-0 left-0 h-full bg-cyan-500 w-0 shadow-[0_0_15px_#06b6d4] transition-all duration-75 ease-out"></div>
+        </div>
+        <div id="loading-text" class="font-mono text-[10px] text-cyan-500/50 mt-3 tracking-widest">SYSTEM CHECK...</div>
+    </div>
 
     <!-- Canvas Container -->
     <div id="canvas-container" class="absolute inset-0 z-0"></div>
@@ -574,9 +582,42 @@
             camera.position.z = isMobileResize ? 22 : 15;
         });
 
+        // --- Loading Sequence Logic ---
+        const loadingScreen = document.getElementById('loading');
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingText = document.getElementById('loading-text');
+
+        let progress = 0;
+        const messages = ["SYSTEM CHECK...", "LOADING ASSETS...", "CALIBRATING SENSORS...", "ESTABLISHING UPLINK...", "READY"];
+
+        function simulateLoading() {
+            if (progress < 100) {
+                progress += Math.random() * 2; // Random increment
+                if (progress > 100) progress = 100;
+                
+                loadingBar.style.width = `${progress}%`;
+                
+                // Change text based on progress
+                const msgIndex = Math.floor((progress / 100) * (messages.length - 1));
+                loadingText.innerText = messages[msgIndex];
+                
+                requestAnimationFrame(simulateLoading);
+            } else {
+                loadingText.innerText = "ACCESS GRANTED";
+                setTimeout(() => {
+                    loadingScreen.style.opacity = '0';
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        // Start the 3D loop only after assets are "loaded"
+                        // But actually animate() is running behind to init WebGL context
+                    }, 800);
+                }, 500);
+            }
+        }
+
         // --- Start ---
-        document.getElementById('loading').style.display = 'none';
-        animate();
+        animate(); // Start Three.js loop immediately so canvas is ready
+        simulateLoading(); // Start UI loading sequence
 
     </script>
 </body>
