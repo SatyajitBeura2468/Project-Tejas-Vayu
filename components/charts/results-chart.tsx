@@ -7,6 +7,9 @@ type ResultsChartProps = {
   currentSeconds?: number;
   dark?: boolean;
   compact?: boolean;
+  focus?: "both" | "control" | "active";
+  showLabels?: boolean;
+  zoomed?: boolean;
 };
 
 const WIDTH = 960;
@@ -36,13 +39,13 @@ function cursorX(seconds: number) {
   return xAtIndex(right - 1) + amount * (xAtIndex(right) - xAtIndex(right - 1));
 }
 
-export function ResultsChart({ currentSeconds = 600, dark = false, compact = false }: ResultsChartProps) {
+export function ResultsChart({ currentSeconds = 600, dark = false, compact = false, focus = "both", showLabels = true, zoomed = false }: ResultsChartProps) {
   const current = reconstructAt(currentSeconds);
   const x = cursorX(currentSeconds);
   const id = dark ? "active-gradient-dark" : "active-gradient";
 
   return (
-    <figure className={`results-chart${dark ? " is-dark" : ""}${compact ? " is-compact" : ""}`}>
+    <figure className={`results-chart${dark ? " is-dark" : ""}${compact ? " is-compact" : ""}${zoomed ? " is-zoomed" : ""}`} data-curve-focus={focus} style={{ "--chart-cursor-x": `${(x / WIDTH) * 100}%` } as React.CSSProperties}>
       <div className="chart-notice">
         <strong>Observation-based normalised reconstruction</strong>
         <span>Not raw instrument logs</span>
@@ -66,13 +69,14 @@ export function ResultsChart({ currentSeconds = 600, dark = false, compact = fal
         {resultMilestones.map((point, index) => (
           <g key={point.id}>
             <line className="chart-grid chart-grid-vertical" x1={xAtIndex(index)} x2={xAtIndex(index)} y1={PAD.top} y2={HEIGHT - PAD.bottom} />
-            <text className="chart-tick" x={xAtIndex(index)} y={HEIGHT - PAD.bottom + 24} textAnchor="middle">
+            <text className="chart-tick" x={xAtIndex(index)} y={HEIGHT - PAD.bottom + 24} textAnchor="middle" opacity={showLabels ? 1 : 0}>
               {point.label.replace(" seconds", "s").replace(" minutes", "m")}
             </text>
           </g>
         ))}
         <text className="chart-axis" x={WIDTH / 2} y={HEIGHT - 14} textAnchor="middle">Time after introduction</text>
         <text className="chart-axis" transform={`translate(20 ${HEIGHT / 2}) rotate(-90)`} textAnchor="middle">Relative sensor response</text>
+        <g className="chart-data-layer">
         <path className="chart-line chart-line-control" d={pathFor("control")} pathLength={1} style={{ strokeDashoffset: Math.max(0, 1 - currentSeconds / 600) }} />
         <path className="chart-line chart-line-active" d={pathFor("active")} pathLength={1} style={{ stroke: `url(#${id})`, strokeDashoffset: Math.max(0, 1 - currentSeconds / 600) }} />
         {resultMilestones.map((point, index) => (
@@ -88,6 +92,7 @@ export function ResultsChart({ currentSeconds = 600, dark = false, compact = fal
             <circle cx={x} cy={yFor(current.active)} r={7} className="cursor-active" />
           </g>
         )}
+        </g>
       </svg>
       <figcaption className="chart-legend">
         <span><i className="legend-control" />Control chamber</span>

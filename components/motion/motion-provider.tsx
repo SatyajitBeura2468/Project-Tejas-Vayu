@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { resolveReducedMotion, type MotionPreference } from "@/lib/motion";
+import { MOTION_STORAGE_KEY, resolveReducedMotion, type MotionPreference } from "@/lib/motion";
 
 type MotionContextValue = {
   preference: MotionPreference;
@@ -11,8 +11,6 @@ type MotionContextValue = {
 };
 
 const MotionContext = createContext<MotionContextValue | null>(null);
-const STORAGE_KEY = "tejasvayu-motion-preference";
-
 export function MotionProvider({ children }: { children: React.ReactNode }) {
   const [preference, setPreferenceState] = useState<MotionPreference>("system");
   const [systemReduced, setSystemReduced] = useState(false);
@@ -21,7 +19,7 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setSystemReduced(media.matches);
     const frame = requestAnimationFrame(() => {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
+      const saved = window.localStorage.getItem(MOTION_STORAGE_KEY);
       if (saved === "system" || saved === "full" || saved === "reduced") setPreferenceState(saved);
       update();
     });
@@ -40,7 +38,7 @@ export function MotionProvider({ children }: { children: React.ReactNode }) {
 
   const setPreference = useCallback((next: MotionPreference) => {
     setPreferenceState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    window.localStorage.setItem(MOTION_STORAGE_KEY, next);
   }, []);
 
   const toggle = useCallback(() => setPreference(reduced ? "full" : "reduced"), [reduced, setPreference]);

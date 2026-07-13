@@ -9,6 +9,12 @@ test("homepage presents the project and reaches its core sections", async ({ pag
   await expect(page.locator(".results-section").getByText("Not raw instrument logs", { exact: true })).toBeVisible();
 });
 
+test("hero entrance never blocks the primary interaction", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: /Explore the project/i }).click();
+  await expect(page.locator("#problem")).toBeInViewport();
+});
+
 test("all required routes load without an error surface", async ({ page }) => {
   test.setTimeout(120_000);
   for (const route of ["/prototype", "/science", "/methodology", "/results", "/dashboard", "/team", "/future", "/sources", "/judge"]) {
@@ -66,6 +72,10 @@ test("reduced-motion visitors receive manual replay controls", async ({ page }) 
   await expect(page.getByText(/Reduced motion is active/i)).toBeVisible();
   await page.getByLabel("Jump to milestone").selectOption("240");
   await expect(page.locator(".replay-time strong")).toHaveText("04:00");
+  await page.goto("/");
+  await expect(page.locator(".hero .prototype-scene")).toHaveAttribute("data-rendering", "static");
+  const duration = await page.locator(".airflow").first().evaluate((element) => getComputedStyle(element).animationDuration);
+  expect(Number.parseFloat(duration)).toBeLessThanOrEqual(0.001);
 });
 
 test("mobile menu provides working route navigation", async ({ page, isMobile }) => {
@@ -80,6 +90,37 @@ test("mobile menu provides working route navigation", async ({ page, isMobile })
   await expect(scienceLink).toHaveAttribute("href", "/science");
   await Promise.all([page.waitForURL(/\/science$/), scienceLink.click()]);
   await expect(page.getByRole("heading", { level: 1 })).toContainText("A surface reaction");
+});
+
+test("mobile menu restores focus when dismissed", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "drawer is a mobile interaction");
+  await page.goto("/");
+  const trigger = page.getByRole("button", { name: "Menu" });
+  await trigger.click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
+test("route transitions preserve immediate navigation and scientific labels", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop dock exposes the route controls directly");
+  await page.goto("/prototype");
+  await Promise.all([page.waitForURL(/\/science$/), page.getByLabel("Primary navigation").getByRole("link", { name: "Science", exact: true }).click()]);
+  await expect(page.locator('.route-transition-shell[aria-hidden="false"]')).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("A surface reaction");
+});
+
+test("off-screen WebGL work pauses and status labels remain honest", async ({ page, isMobile }) => {
+  test.skip(isMobile, "desktop WebGL lifecycle check");
+  await page.goto("/");
+  const scene = page.locator(".hero .prototype-scene");
+  await expect(scene).toHaveAttribute("data-frame-loop", "active");
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await expect(scene).toHaveAttribute("data-frame-loop", "paused");
+  await page.goto("/dashboard");
+  await expect(page.locator(".replay-status")).toHaveText("Observation replay");
+  await expect(page.getByText("Visual reconstruction", { exact: true })).toBeVisible();
+  await expect(page.locator(".replay-status")).not.toContainText(/live|connected|streaming/i);
 });
 
 test("pages do not overflow horizontally", async ({ page }) => {

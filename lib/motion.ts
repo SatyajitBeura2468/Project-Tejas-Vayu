@@ -11,3 +11,10 @@ export const motionDurations = {
   standard: 0.56,
   cinematic: 1.1,
 } as const;
+
+export const MOTION_STORAGE_KEY = "tejasvayu-motion-preference";
+export const INTRO_SESSION_KEY = "tejasvayu-intro-seen";
+
+export function getIntroDuration(repeatVisit: boolean) {
+  return repeatVisit ? 1.1 : 3.1;
+}

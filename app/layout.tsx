@@ -7,7 +7,9 @@ import "@/styles/visuals.css";
 import "@/styles/home.css";
 import "@/styles/detail.css";
 import "@/styles/judge.css";
+import "@/styles/motion.css";
 import { MotionProvider } from "@/components/motion/motion-provider";
+import { MotionShell } from "@/components/motion/motion-shell";
 import { SiteHeader } from "@/components/layout/site-header";
 import { createPageMetadata, siteUrl } from "@/lib/seo";
 
@@ -52,7 +54,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <a className="skip-link" href="#main-content">Skip to content</a>
         <MotionProvider>
           <SiteHeader />
-          {children}
+          <MotionShell>
+            {children}
+          </MotionShell>
         </MotionProvider>
         <Script id="structured-data" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       </body>

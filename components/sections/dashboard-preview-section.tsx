@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { ReplayDashboard } from "@/components/dashboard/replay-dashboard";
+import { SectionTransition } from "@/components/motion/section-transition";
 
 export function DashboardPreviewSection() {
   return (
     <section className="section section-dark dashboard-section" id="dashboard-preview" aria-labelledby="dashboard-preview-heading">
+      <SectionTransition tone="dark" />
       <div className="content-wrap">
         <header className="dashboard-section-intro">
           <div><p className="section-index">09 · Recorded demonstration</p><h2 id="dashboard-preview-heading">The evidence has a timeline.<br /><span className="accent">Replay it.</span></h2></div>

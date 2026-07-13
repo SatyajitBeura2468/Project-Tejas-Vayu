@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ArrowRight, Gauge, Menu, Microscope, PanelsTopLeft, Scale, Waves, X } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/ui/brand-mark";
 import { mobileNavigation, modeNavigation, primaryNavigation } from "@/content/navigation";
@@ -16,6 +17,7 @@ export function SiteHeader() {
   const [homeDocked, setHomeDocked] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (pathname !== "/") return;
@@ -32,7 +34,10 @@ export function SiteHeader() {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (menuOpen && !dialog.open) dialog.showModal();
-    if (!menuOpen && dialog.open) dialog.close();
+    if (!menuOpen && dialog.open) {
+      dialog.close();
+      menuButtonRef.current?.focus();
+    }
   }, [menuOpen]);
 
   if (pathname === "/judge") return null;
@@ -50,6 +55,7 @@ export function SiteHeader() {
                 <Link key={item.href} href={item.href} aria-current={pathname === item.href ? "page" : undefined}>
                   {docked && Icon && <Icon size={16} aria-hidden="true" />}
                   <span>{docked ? item.shortLabel ?? item.label : item.label}</span>
+                  {pathname === item.href && <motion.i className="nav-active-indicator" layoutId="navigation-active-indicator" transition={{ type: "spring", stiffness: 260, damping: 28 }} />}
                 </Link>
               );
             })}
@@ -59,7 +65,7 @@ export function SiteHeader() {
             <button className="motion-compact" onClick={toggle} aria-pressed={reduced} aria-label={reduced ? "Enable full motion" : "Reduce motion"}>
               <Waves size={18} aria-hidden="true" />
             </button>
-            <button className="menu-button" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="mobile-menu">
+            <button ref={menuButtonRef} className="menu-button" onClick={() => setMenuOpen(true)} aria-expanded={menuOpen} aria-controls="mobile-menu">
               <Menu size={22} aria-hidden="true" /><span>Menu</span>
             </button>
           </div>
@@ -77,10 +83,10 @@ export function SiteHeader() {
           <Waves aria-hidden="true" /><span>{reduced ? "Reduced motion on" : "Reduce motion"}</span><span className="toggle-state" aria-hidden="true" />
         </button>
         <nav aria-label="Mobile navigation">
-          {mobileNavigation.map((item) => {
+          {mobileNavigation.map((item, index) => {
             const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
             return (
-              <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMenuOpen(false)}>
+              <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} onClick={() => setMenuOpen(false)} style={{ "--menu-index": index } as React.CSSProperties}>
                 <span>{item.label}</span><ArrowRight size={18} aria-hidden="true" />
               </Link>
             );

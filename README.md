@@ -7,7 +7,9 @@ The official Version 1 digital identity for Project Tejasvayu: a student-led inv
 ## Experience
 
 - A cinematic, responsive long-form project story
+- A shared motion system with first-visit and repeat-visit pacing, route transitions, section progress and deliberate reduced-motion alternatives
 - A code-native interactive two-chamber prototype visual with a non-WebGL fallback
+- Scroll-led prototype inspection, construction, science, methodology, results and future chapters with manual controls on touch devices
 - Dedicated prototype, science, methodology, results, dashboard, team, future and sources routes
 - A seven-chapter keyboard, touch and fullscreen judge presentation
 - An accessible recorded-results replay with play, pause, speed, restart and milestone controls
@@ -44,7 +46,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser suite checks core routes, the floating mode dock, judge keyboard flow, replay controls, reduced-motion behaviour, the mobile navigation sheet and horizontal overflow.
+The browser suite checks every core route, immediate hero interaction, the floating mode dock, judge keyboard and touch flow, replay controls, route-transition accessibility, reduced-motion behaviour, off-screen WebGL pausing, mobile navigation and horizontal overflow.
 
 ## Routes
 
