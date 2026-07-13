@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { DetailHero, DetailPage, DetailSection } from "@/components/layout/detail-page";
-import { StaticPrototypeVisual } from "@/components/three/prototype-scene";
+import { StaticPrototypeVisual } from "@/components/three/prototype-static";
 import { PrototypeSection } from "@/components/sections/prototype-section";
 import { SafetyNote } from "@/components/ui/safety-note";
 import { SourceLink } from "@/components/ui/source-link";

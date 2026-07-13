@@ -2,41 +2,49 @@
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Pause, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useInView } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import { SectionTransition } from "@/components/motion/section-transition";
 import { useMotionPreference } from "@/components/motion/motion-provider";
 import { constructionSteps } from "@/content/project";
 import { SafetyNote } from "@/components/ui/safety-note";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { homeMotionTokens as motionTokens } from "@/lib/motion-tokens";
 
 export function ConstructionSection() {
   const { reduced } = useMotionPreference();
+  const sectionRef = useRef<HTMLElement>(null);
+  const inView = useInView(sectionRef, { amount: 0.14 });
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
-    if (!playing || reduced) return;
+    if (!playing || reduced || !inView) return;
     const timer = window.setInterval(() => {
       setStep((current) => {
         if (current >= constructionSteps.length - 1) { setPlaying(false); return current; }
         return current + 1;
       });
-    }, 1800);
+    }, 2300);
     return () => window.clearInterval(timer);
-  }, [playing, reduced]);
+  }, [inView, playing, reduced]);
 
   return (
-    <section className="section section-white construction-section" id="construction" aria-labelledby="construction-title">
+    <section ref={sectionRef} className="section section-white construction-section" id="construction" aria-labelledby="construction-title">
       <SectionTransition tone="light" />
       <div className="content-wrap">
-        <SectionHeading index="05 · Construction overview" title={<>Built as a<br /><span className="accent">controlled comparison.</span></>} copy={<p id="construction-title">The assembly sequence keeps the two chambers comparable, then introduces TiO₂ coating and enclosed UV illumination only in the active chamber.</p>} />
+        <SectionHeading animated index="05 · Construction overview" title={<>Built as a<br /><span className="accent">controlled comparison.</span></>} copy={<p id="construction-title">The assembly sequence keeps the two chambers comparable, then introduces TiO₂ coating and enclosed UV illumination only in the active chamber.</p>} />
         <div className="construction-assembly" data-step={step + 1}>
           <div className="assembly-visual" role="img" aria-label={`Assembly step ${step + 1}: ${constructionSteps[step]}`}>
             <i className="assembly-base" /><i className="assembly-glass glass-left" /><i className="assembly-glass glass-right" /><i className="assembly-house" /><i className="assembly-sensor" /><i className="assembly-fan" /><i className="assembly-coating" /><i className="assembly-uv" /><i className="assembly-electrical" /><i className="assembly-seal" />
           </div>
           <div className="assembly-copy">
-            <p className="assembly-counter">Step {String(step + 1).padStart(2, "0")} / {String(constructionSteps.length).padStart(2, "0")}</p>
-            <h3>{constructionSteps[step]}</h3>
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div key={step} className="assembly-step-copy" initial={reduced ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }} transition={{ duration: reduced ? 0.01 : motionTokens.duration.standard, ease: motionTokens.ease.cinematic }}>
+                <p className="assembly-counter">Step {String(step + 1).padStart(2, "0")} / {String(constructionSteps.length).padStart(2, "0")}</p>
+                <h3>{constructionSteps[step]}</h3>
+              </motion.div>
+            </AnimatePresence>
             <div className="assembly-progress" aria-hidden="true"><i style={{ width: `${((step + 1) / constructionSteps.length) * 100}%` }} /></div>
             <div className="assembly-controls">
               <button onClick={() => { setStep((current) => Math.max(0, current - 1)); setPlaying(false); }} disabled={step === 0}><ArrowLeft aria-hidden="true" />Previous step</button>

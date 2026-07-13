@@ -34,6 +34,11 @@ html {
   scroll-padding-top: 6rem;
 }
 
+html:has(.home-main),
+html[data-home-page="true"] {
+  overflow-x: clip !important;
+}
+
 body {
   margin: 0;
   background: var(--white);

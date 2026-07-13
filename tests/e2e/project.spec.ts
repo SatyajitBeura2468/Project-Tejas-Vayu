@@ -15,6 +15,22 @@ test("hero entrance never blocks the primary interaction", async ({ page }) => {
   await expect(page.locator("#problem")).toBeInViewport();
 });
 
+test("hero title mask contains the complete TEJASVAYU word", async ({ page }) => {
+  await page.goto("/");
+  await page.evaluate(async () => { await document.fonts.ready; });
+  await expect(page.locator(".hero-name-word")).toBeVisible();
+  await page.waitForTimeout(1400);
+  const bounds = await page.evaluate(() => {
+    const mask = document.querySelector<HTMLElement>(".hero-word-mask")?.getBoundingClientRect();
+    const word = document.querySelector<HTMLElement>(".hero-name-word")?.getBoundingClientRect();
+    if (!mask || !word) return null;
+    return { maskRight: mask.right, wordRight: word.right };
+  });
+  expect(bounds).not.toBeNull();
+  expect(bounds!.wordRight).toBeLessThanOrEqual(bounds!.maskRight + 0.5);
+  expect(await page.locator("canvas").count()).toBeLessThanOrEqual(1);
+});
+
 test("all required routes load without an error surface", async ({ page }) => {
   test.setTimeout(120_000);
   for (const route of ["/prototype", "/science", "/methodology", "/results", "/dashboard", "/team", "/future", "/sources", "/judge"]) {
@@ -23,6 +39,22 @@ test("all required routes load without an error surface", async ({ page }) => {
     await expect(page.locator("body")).not.toContainText("Something interrupted the experiment");
     await expect(page.locator("#main-content")).toBeVisible();
   }
+});
+
+test("enhanced motion stays isolated to the homepage", async ({ page, isMobile }) => {
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-home-page", "true");
+  await expect(page.locator(".science-section .section-header")).toHaveClass(/is-animated/);
+  await expect(page.locator(".prototype-section .section-header")).toHaveClass(/is-animated/);
+  if (!isMobile) await expect(page.locator(".cursor-field")).toHaveClass(/is-home-motion/);
+
+  await page.goto("/science");
+  await expect(page.locator("html")).not.toHaveAttribute("data-home-page", "true");
+  await expect(page.locator(".science-section .section-header")).not.toHaveClass(/is-animated/);
+  if (!isMobile) await expect(page.locator(".cursor-field")).not.toHaveClass(/is-home-motion/);
+
+  await page.goto("/prototype");
+  await expect(page.locator(".prototype-section .section-header")).not.toHaveClass(/is-animated/);
 });
 
 test("floating mode dock appears after the homepage hero", async ({ page, isMobile }) => {
@@ -127,7 +159,15 @@ test("pages do not overflow horizontally", async ({ page }) => {
   for (const route of ["/", "/dashboard", "/judge"]) {
     await page.goto(route);
     await expect(page.locator("#main-content")).toBeVisible();
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(overflow, `${route} horizontal overflow`).toBeLessThanOrEqual(1);
+    const metrics = await page.evaluate(() => {
+      const viewportWidth = document.documentElement.clientWidth;
+      const offenders = Array.from(document.querySelectorAll<HTMLElement>("body *"))
+        .map((element) => ({ element, bounds: element.getBoundingClientRect() }))
+        .filter(({ bounds }) => bounds.right > viewportWidth + 1 || bounds.left < -1)
+        .slice(0, 8)
+        .map(({ element, bounds }) => `${element.tagName.toLowerCase()}.${element.className || "(no-class)"}[${Math.round(bounds.left)},${Math.round(bounds.right)}]`);
+      return { overflow: document.documentElement.scrollWidth - viewportWidth, offenders };
+    });
+    expect(metrics.overflow, `${route} horizontal overflow; offenders: ${metrics.offenders.join(", ")}`).toBeLessThanOrEqual(1);
   }
 });

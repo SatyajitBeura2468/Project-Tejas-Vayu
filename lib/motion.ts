@@ -18,3 +18,7 @@ export const INTRO_SESSION_KEY = "tejasvayu-intro-seen";
 export function getIntroDuration(repeatVisit: boolean) {
   return repeatVisit ? 1.1 : 3.1;
 }
+
+export function getHomeIntroDuration(repeatVisit: boolean) {
+  return repeatVisit ? 0.75 : 1.65;
+}

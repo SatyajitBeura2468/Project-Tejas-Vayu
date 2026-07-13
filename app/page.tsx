@@ -13,18 +13,21 @@ import { FutureSection } from "@/components/sections/future-section";
 import { LimitationsSection } from "@/components/sections/limitations-section";
 import { ClosingSection } from "@/components/sections/closing-section";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { HomeMotionObserver } from "@/components/motion/home-motion-observer";
+import { Reveal } from "@/components/motion/reveal";
 
 export default function HomePage() {
   return (
     <div className="page-shell">
-      <main id="main-content">
+      <HomeMotionObserver />
+      <main id="main-content" className="home-main">
         <HeroSection />
         <ProblemSection />
         <ConceptSection />
         <EvolutionSection />
-        <PrototypeSection />
+        <PrototypeSection homeMotion />
         <ConstructionSection />
-        <ScienceSection />
+        <ScienceSection homeMotion />
         <MethodologySection />
         <ResultsSection />
         <DashboardPreviewSection />
@@ -33,7 +36,7 @@ export default function HomePage() {
         <LimitationsSection />
         <ClosingSection />
       </main>
-      <SiteFooter />
+      <Reveal className="home-footer-reveal" distance={16}><SiteFooter /></Reveal>
     </div>
   );
 }

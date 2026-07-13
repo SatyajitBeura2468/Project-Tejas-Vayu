@@ -3,10 +3,11 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Line, OrbitControls } from "@react-three/drei";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BoxGeometry, type Group, type MeshStandardMaterial } from "three";
+import { BoxGeometry, MathUtils, type Group, type MeshStandardMaterial } from "three";
 import { useMotionPreference } from "@/components/motion/motion-provider";
+import { StaticPrototypeVisual, type PrototypeView } from "@/components/three/prototype-static";
 
-export type PrototypeView = "exterior" | "airflow" | "components";
+export type { PrototypeView } from "@/components/three/prototype-static";
 
 function House({ active, componentView }: { active: boolean; componentView: boolean }) {
   return (
@@ -118,7 +119,7 @@ function PollutantParticles({ active, reduced, count }: { active: boolean; reduc
   );
 }
 
-function Chamber({ active, position, reduced, view, mobile }: { active: boolean; position: [number, number, number]; reduced: boolean; view: PrototypeView; mobile: boolean }) {
+function Chamber({ active, position, reduced, view, mobile, homeMotion }: { active: boolean; position: [number, number, number]; reduced: boolean; view: PrototypeView; mobile: boolean; homeMotion: boolean }) {
   const uv = useRef<MeshStandardMaterial>(null);
   useFrame(({ clock }) => {
     if (!uv.current || reduced) return;
@@ -130,7 +131,11 @@ function Chamber({ active, position, reduced, view, mobile }: { active: boolean;
     <group position={position}>
       <mesh receiveShadow>
         <boxGeometry args={[3.25, 2.8, 3.05]} />
-        <meshPhysicalMaterial color={active ? "#8b5cf6" : "#78b9d0"} transmission={0.92} transparent opacity={view === "components" ? 0.055 : 0.12} roughness={0.08} thickness={0.18} metalness={0.04} ior={1.32} />
+        {homeMotion ? (
+          <meshStandardMaterial color={active ? "#8b5cf6" : "#78b9d0"} transparent opacity={view === "components" ? 0.045 : 0.1} roughness={0.28} metalness={0.08} depthWrite={false} />
+        ) : (
+          <meshPhysicalMaterial color={active ? "#8b5cf6" : "#78b9d0"} transmission={0.92} transparent opacity={view === "components" ? 0.055 : 0.12} roughness={0.08} thickness={0.18} metalness={0.04} ior={1.32} />
+        )}
       </mesh>
       <lineSegments><edgesGeometry args={[new BoxGeometry(3.25, 2.8, 3.05)]} /><lineBasicMaterial color={frameColor} transparent opacity={view === "components" ? 0.88 : 0.6} /></lineSegments>
       <House active={active} componentView={view === "components"} />
@@ -166,21 +171,35 @@ function CitySilhouette() {
   );
 }
 
-function SceneContents({ reduced, view, variant, mobile, inspectable }: { reduced: boolean; view: PrototypeView; variant: "hero" | "inspection"; mobile: boolean; inspectable: boolean }) {
+function SceneContents({ reduced, view, variant, mobile, inspectable, homeMotion }: { reduced: boolean; view: PrototypeView; variant: "hero" | "inspection"; mobile: boolean; inspectable: boolean; homeMotion: boolean }) {
   const group = useRef<Group>(null);
   const pointer = useThree((state) => state.pointer);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (!group.current || reduced) return;
-    if (!inspectable) {
-      group.current.rotation.y += (pointer.x * 0.075 - group.current.rotation.y) * 0.025;
-      group.current.rotation.x += (-pointer.y * 0.028 - group.current.rotation.x) * 0.025;
+    if (!homeMotion) {
+      if (!inspectable) {
+        group.current.rotation.y += (pointer.x * 0.075 - group.current.rotation.y) * 0.025;
+        group.current.rotation.x += (-pointer.y * 0.028 - group.current.rotation.x) * 0.025;
+      }
+      group.current.position.y = Math.sin(clock.elapsedTime * 0.3) * (mobile ? 0.018 : 0.035);
+      if (variant === "hero" && !mobile) {
+        group.current.position.x = Math.sin(clock.elapsedTime * 0.18) * 0.1;
+        const driftScale = 1 + Math.cos(clock.elapsedTime * 0.16) * 0.006;
+        group.current.scale.setScalar(driftScale);
+      }
+      return;
     }
-    group.current.position.y = Math.sin(clock.elapsedTime * 0.3) * (mobile ? 0.018 : 0.035);
+    const viewRotation = view === "components" ? 0.1 : view === "airflow" ? -0.08 : -0.04;
+    const pointerRotation = inspectable ? 0 : pointer.x * 0.045;
+    group.current.rotation.y = MathUtils.damp(group.current.rotation.y, viewRotation + pointerRotation, 4.2, delta);
+    group.current.rotation.x = MathUtils.damp(group.current.rotation.x, inspectable ? 0.035 : -pointer.y * 0.018, 4.2, delta);
+    group.current.position.y = MathUtils.damp(group.current.position.y, Math.sin(clock.elapsedTime * 0.27) * 0.026, 3.6, delta);
+    const targetScale = view === "components" ? 1.035 : view === "airflow" ? 1.015 : 1;
+    const nextScale = MathUtils.damp(group.current.scale.x, targetScale, 4, delta);
+    group.current.scale.setScalar(nextScale);
     if (variant === "hero" && !mobile) {
-      group.current.position.x = Math.sin(clock.elapsedTime * 0.18) * 0.1;
-      const driftScale = 1 + Math.cos(clock.elapsedTime * 0.16) * 0.006;
-      group.current.scale.setScalar(driftScale);
+      group.current.position.x = MathUtils.damp(group.current.position.x, Math.sin(clock.elapsedTime * 0.16) * 0.055, 3.2, delta);
     }
   });
 
@@ -188,8 +207,8 @@ function SceneContents({ reduced, view, variant, mobile, inspectable }: { reduce
     <>
       <CitySilhouette />
       <group ref={group} rotation={[0.04, -0.04, 0]} position={[0, 0.05, 0]}>
-        <Chamber active={false} position={[-2, 0, 0]} reduced={reduced} view={view} mobile={mobile} />
-        <Chamber active position={[2, 0, 0]} reduced={reduced} view={view} mobile={mobile} />
+        <Chamber active={false} position={[-2, 0, 0]} reduced={reduced} view={view} mobile={mobile} homeMotion={homeMotion} />
+        <Chamber active position={[2, 0, 0]} reduced={reduced} view={view} mobile={mobile} homeMotion={homeMotion} />
         <mesh position={[0, -1.55, 0]} receiveShadow><boxGeometry args={[8.3, 0.18, 4.4]} /><meshStandardMaterial color="#071a2b" metalness={0.45} roughness={0.42} /></mesh>
         <mesh position={[0, -1.43, 1.75]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[8, 2.3]} /><meshStandardMaterial color="#0b2436" metalness={0.5} roughness={0.3} transparent opacity={mobile ? 0.18 : 0.28} /></mesh>
       </group>
@@ -198,27 +217,14 @@ function SceneContents({ reduced, view, variant, mobile, inspectable }: { reduce
   );
 }
 
-export function StaticPrototypeVisual({ view = "exterior" }: { view?: PrototypeView }) {
-  return (
-    <div className={`static-prototype static-view-${view}`} role="img" aria-label="Two transparent prototype chambers. The active chamber has a violet enclosed UV strip and coated surfaces; both contain a house model, base sensor and front circulation fan.">
-      {[false, true].map((active) => (
-        <div className={`static-chamber${active ? " is-active" : ""}`} key={String(active)}>
-          <span className="static-uv" /><span className="static-house"><i /></span><span className="static-fan" /><span className="static-sensor" />
-          <svg viewBox="0 0 240 150" aria-hidden="true"><path d="M24 104C40 32 159 24 207 77S153 139 80 115 35 78 82 60" /></svg>
-          <strong>{active ? "TiO₂ + UV activation" : "Untreated control"}</strong>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export default function PrototypeScene({ className = "", variant = "inspection", view = "exterior", resetKey = 0, inspectable = false }: { className?: string; variant?: "hero" | "inspection"; view?: PrototypeView; resetKey?: number; inspectable?: boolean }) {
+export default function PrototypeScene({ className = "", variant = "inspection", view = "exterior", resetKey = 0, inspectable = false, homeMotion = false }: { className?: string; variant?: "hero" | "inspection"; view?: PrototypeView; resetKey?: number; inspectable?: boolean; homeMotion?: boolean }) {
   const { reduced } = useMotionPreference();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(true);
+  const [inView, setInView] = useState(homeMotion ? variant === "hero" : true);
+  const [nearView, setNearView] = useState(homeMotion ? variant === "hero" : true);
   const [documentVisible, setDocumentVisible] = useState(true);
   const [webgl, setWebgl] = useState<boolean | null>(null);
-  const [mobile, setMobile] = useState(false);
+  const [mobile, setMobile] = useState(() => homeMotion && typeof window !== "undefined" && window.matchMedia("(max-width: 760px)").matches);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 760px)");
@@ -241,10 +247,17 @@ export default function PrototypeScene({ className = "", variant = "inspection",
   useEffect(() => {
     const node = wrapperRef.current;
     if (!node || !("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin: "160px" });
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
+    if (!homeMotion) {
+      const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin: "160px" });
+      observer.observe(node);
+      return () => observer.disconnect();
+    }
+    const activeObserver = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { rootMargin: "180px" });
+    const mountObserver = new IntersectionObserver(([entry]) => setNearView(entry.isIntersecting), { rootMargin: "900px 0px" });
+    activeObserver.observe(node);
+    mountObserver.observe(node);
+    return () => { activeObserver.disconnect(); mountObserver.disconnect(); };
+  }, [homeMotion]);
 
   useEffect(() => {
     const update = () => setDocumentVisible(document.visibilityState === "visible");
@@ -252,15 +265,18 @@ export default function PrototypeScene({ className = "", variant = "inspection",
     return () => document.removeEventListener("visibilitychange", update);
   }, []);
 
-  const animating = inView && documentVisible;
+  const shouldUseWebgl = homeMotion
+    ? Boolean(webgl && !reduced && !mobile && nearView)
+    : Boolean(webgl && !reduced);
+  const animating = homeMotion ? shouldUseWebgl && inView && documentVisible : inView && documentVisible;
   return (
-    <div className={`prototype-scene ${className}`} ref={wrapperRef} data-rendering={webgl && !reduced ? "webgl" : "static"} data-frame-loop={animating ? "active" : "paused"}>
-      {webgl && !reduced ? (
-        <Canvas key={resetKey} camera={{ position: [0, 2.1, 10.6], fov: 38 }} dpr={mobile ? 1 : [1, 1.5]} frameloop={animating ? "always" : "never"} gl={{ antialias: !mobile, alpha: true, powerPreference: "high-performance" }} shadows={!mobile}>
+    <div className={`prototype-scene ${className}`} ref={wrapperRef} data-rendering={shouldUseWebgl ? "webgl" : "static"} data-frame-loop={animating ? "active" : "paused"}>
+      {shouldUseWebgl ? (
+        <Canvas key={resetKey} camera={{ position: [0, 2.1, 10.6], fov: 38 }} dpr={homeMotion ? [1, 1.25] : mobile ? 1 : [1, 1.5]} frameloop={animating ? "always" : "never"} gl={{ antialias: homeMotion || !mobile, alpha: true, powerPreference: "high-performance" }} shadows={homeMotion ? false : !mobile} {...(homeMotion ? { performance: { min: 0.55 } } : {})}>
           <ambientLight intensity={0.72} />
-          <directionalLight position={[2, 7, 5]} intensity={mobile ? 2.2 : 3.2} color="#e7f7ff" castShadow={!mobile} />
+          <directionalLight position={[2, 7, 5]} intensity={homeMotion ? 3 : mobile ? 2.2 : 3.2} color="#e7f7ff" castShadow={!homeMotion && !mobile} />
           <pointLight position={[-5, 1, 4]} intensity={1.7} color="#22d3ee" />
-          <SceneContents reduced={reduced} view={view} variant={variant} mobile={mobile} inspectable={inspectable} />
+          <SceneContents reduced={reduced} view={view} variant={variant} mobile={mobile} inspectable={inspectable} homeMotion={homeMotion} />
         </Canvas>
       ) : <StaticPrototypeVisual view={view} />}
       <p className="sr-only">Narrative prototype visual: both chambers contain a house model, MQ-135 sensor near the base, circulation fan toward the front, a sealed enclosure and a lower access point. The active chamber additionally contains TiO₂-coated surfaces and an enclosed UV strip.</p>

@@ -9,6 +9,7 @@ import { SectionTransition } from "@/components/motion/section-transition";
 import { useMotionPreference } from "@/components/motion/motion-provider";
 import { SourceLink } from "@/components/ui/source-link";
 import { SectionHeading } from "@/components/ui/section-heading";
+import { homeMotionTokens } from "@/lib/motion-tokens";
 
 const variables = [
   ["Surface area", Move3d], ["UV intensity", Lightbulb], ["Airflow", Waves], ["Contact time", Timer], ["Humidity", Droplets], ["Coating coverage", Paintbrush],
@@ -23,30 +24,41 @@ const relationshipNotes = [
   ["Limited coated area", "Partial coated coverage", "More coated area is available"],
 ] as const;
 
-export function ScienceSection() {
+export function ScienceSection({ homeMotion = false }: { homeMotion?: boolean }) {
   const [active, setActive] = useState(0);
   const [variableValues, setVariableValues] = useState([1, 1, 1, 1, 1, 1]);
   const { reduced } = useMotionPreference();
   const stage = mechanismStages[active];
+  const mechanismVisual = (
+    <>
+      <div className={`photon-beam stage-${active + 1}`} />
+      <div className="tio-surface">TiO₂ <span /></div>
+      <i className="electron">e⁻</i><i className="hole">h⁺</i><i className="radical">•OH</i><i className="oxygen">O₂•⁻</i>
+      <div className="pollutant-molecule"><i /><i /><i /><i /></div>
+      <div className="science-lattice">{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div>
+    </>
+  );
   return (
     <section className="section section-dark science-section" id="science" aria-labelledby="science-title">
       <SectionTransition tone="violet" />
       <div className="content-wrap">
-        <SectionHeading index="06 · Photocatalytic principle" title={<>Light activates the surface.<br /><span className="accent">Chemistry does the rest.</span></>} copy={<p id="science-title">A simplified sequence explains the surface mechanism without suggesting that every pollutant is instantly converted into only carbon dioxide and water.</p>} />
+        <SectionHeading animated={homeMotion} index="06 · Photocatalytic principle" title={<>Light activates the surface.<br /><span className="accent">Chemistry does the rest.</span></>} copy={<p id="science-title">A simplified sequence explains the surface mechanism without suggesting that every pollutant is instantly converted into only carbon dioxide and water.</p>} />
         <div className="science-stage">
-          <div className="mechanism-visual" data-chapter={active + 1} aria-hidden="true">
-            <div className={`photon-beam stage-${active + 1}`} />
-            <div className="tio-surface">TiO₂ <span /></div>
-            <i className="electron">e⁻</i><i className="hole">h⁺</i><i className="radical">•OH</i><i className="oxygen">O₂•⁻</i>
-            <div className="pollutant-molecule"><i /><i /><i /><i /></div>
-            <div className="science-lattice">{Array.from({ length: 18 }, (_, index) => <i key={index} />)}</div>
-          </div>
+          {homeMotion ? (
+            <motion.div className="mechanism-visual" data-chapter={active + 1} aria-hidden="true" initial={reduced ? false : { opacity: 0, scale: 0.985 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.42 }} transition={{ duration: reduced ? 0.01 : homeMotionTokens.duration.cinematic, ease: homeMotionTokens.ease.cinematic }}>
+              {mechanismVisual}
+            </motion.div>
+          ) : (
+            <div className="mechanism-visual" data-chapter={active + 1} aria-hidden="true">
+              {mechanismVisual}
+            </div>
+          )}
           <div className="mechanism-content">
             <div className="mechanism-tabs" role="tablist" aria-label="Photocatalytic reaction stages">
               {mechanismStages.map((item, index) => <button key={item.title} role="tab" aria-selected={active === index} aria-controls="mechanism-panel" onClick={() => setActive(index)}><span>{String(index + 1).padStart(2, "0")}</span>{item.title}</button>)}
             </div>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div key={stage.title} id="mechanism-panel" role="tabpanel" className="mechanism-panel" initial={reduced ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }} transition={{ duration: reduced ? 0.01 : 0.42 }}>
+            <AnimatePresence mode={homeMotion ? "popLayout" : "wait"} initial={false}>
+              <motion.div key={stage.title} id="mechanism-panel" role="tabpanel" className="mechanism-panel" initial={reduced ? false : homeMotion ? { opacity: 0, x: 14 } : { opacity: 0, y: 14 }} animate={homeMotion ? { opacity: 1, x: 0 } : { opacity: 1, y: 0 }} exit={reduced ? { opacity: 0 } : homeMotion ? { opacity: 0, x: -10 } : { opacity: 0, y: -10 }} transition={homeMotion ? { duration: reduced ? 0.01 : homeMotionTokens.duration.standard, ease: homeMotionTokens.ease.cinematic } : { duration: reduced ? 0.01 : 0.42 }}>
                 <p>{stage.copy}</p>
                 <pre aria-label={`Equation for ${stage.title}`}>{stage.equation}</pre>
                 {active === 3 && <small>Exact oxidation products depend on pollutant type, surface chemistry and operating conditions.</small>}
